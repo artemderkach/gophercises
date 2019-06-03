@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 
-	urlshort "github.com/gophercises/2_urlshort"
+	"github.com/boltdb/bolt"
+	urlshort "github.com/mind-rot/gophercises/2_urlshort"
 )
 
 var defaultMap = map[string]string{
@@ -16,18 +18,43 @@ var defaultMap = map[string]string{
 }
 
 func main() {
+
 	mux := defaultMux()
 
 	// Build the MapHandler using the mux as the fallback
-	mapHandler := urlshort.MapHandler(defaultMap, mux)
+	db, err := bolt.Open("db.bolt", 0600, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	dbHandler := urlshort.DBHandler(db, mux)
+	// mapHandler := urlshort.MapHandler(defaultMap, mux)
 
 	// Build the YAMLHandler using the mapHandler as the fallback
-	yamlHandler, err := urlshort.YAMLHandler(parseYaml(), mapHandler)
+	yamlHandler, err := urlshort.YAMLHandler(parseYaml(), dbHandler)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Starting the server on :8080")
 	http.ListenAndServe(":8080", yamlHandler)
+}
+
+func initDB() {
+	db, err := bolt.Open("db.bolt", 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucket([]byte("urls"))
+		if err != nil {
+			return err
+		}
+		for k, v := range defaultMap {
+			b.Put([]byte(k), []byte(v))
+		}
+		return nil
+	})
+	defer db.Close()
 }
 
 func parseYaml() []byte {

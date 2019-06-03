@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/boltdb/bolt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -64,4 +65,18 @@ func buildMap(parsedYaml []UrlMap) map[string]string {
 		urlPathMap[urlMap.Path] = urlMap.Url
 	}
 	return urlPathMap
+}
+
+func DBHandler(db bolt.DB, fallback http.Handler) map[string]string {
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("urls"))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fmt.Printf("key=%s, value=%s\n", k, v)
+
+		}
+
+		return nil
+	})
 }
