@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	urlshort "github.com/gophercises/2_urlshort"
+	urlshort "github.com/mind-rot/gophercises/2_urlshort"
 )
 
 var defaultMap = map[string]string{
@@ -26,12 +26,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	jsonHandler, err := urlshort.JSONHandler(parseJson(), yamlHandler)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", yamlHandler)
+	http.ListenAndServe(":8080", jsonHandler)
 }
 
 func parseYaml() []byte {
-	var defaultYamlMap = []byte(`
+	defaultYamlMap := []byte(`
 - path: /urlshort
   url: https://github.com/gophercises/urlshort
 - path: /urlshort-final
@@ -51,6 +55,18 @@ func parseYaml() []byte {
 		panic(err)
 	}
 	return yamlFileContent
+}
+
+func parseJson() []byte {
+	defaultJsonMap := []byte(`
+[
+    {
+		"path": "/urlshort-gopher",
+		"url": "https://gophercises.com/exercises/urlshort"
+	}
+]
+`)
+	return defaultJsonMap
 }
 
 func defaultMux() *http.ServeMux {
