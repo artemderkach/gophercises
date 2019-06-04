@@ -67,16 +67,25 @@ func buildMap(parsedYaml []UrlMap) map[string]string {
 	return urlPathMap
 }
 
-func DBHandler(db bolt.DB, fallback http.Handler) map[string]string {
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("urls"))
-		c := b.Cursor()
+func DBHandler(db *bolt.DB, fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("urls"))
+			c := b.Cursor()
 
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			fmt.Printf("key=%s, value=%s\n", k, v)
+			for k, v := c.First(); k != nil; k, v = c.Next() {
+				fmt.Printf("key=%s, value=%s\n", k, v)
+				if string(k) != r.URL.Path {
+					continue
+				}
+				http.Redirect(w, r, string(v), http.StatusMovedPermanently)
+				return nil
+			}
 
+			return nil
+		})
+		if err != nil {
+			w.Write([]byte(err.Error()))
 		}
-
-		return nil
-	})
+	}
 }

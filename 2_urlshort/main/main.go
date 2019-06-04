@@ -21,6 +21,7 @@ func main() {
 
 	mux := defaultMux()
 
+	initDB()
 	// Build the MapHandler using the mux as the fallback
 	db, err := bolt.Open("db.bolt", 0600, nil)
 	if err != nil {
@@ -51,6 +52,7 @@ func initDB() {
 		}
 		for k, v := range defaultMap {
 			b.Put([]byte(k), []byte(v))
+			fmt.Println("Writing key value pair:", k, v)
 		}
 		return nil
 	})
