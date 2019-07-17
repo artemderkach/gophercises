@@ -1,0 +1,40 @@
+{
+  "intro": {
+    "title": "title 1",
+    "story": [
+      "story a",
+      "story b",
+      "story c"
+    ],
+    "options": [
+      {
+        "text": "text1",
+        "arc": "arc1"
+      },
+      {
+        "text": "text2",
+        "arc": "arc2"
+      }
+    ]
+  },
+  "arc2": {
+    "title": "title 2",
+    "story": [
+      "story aa",
+      "story bb",
+      "story cc",
+      "story dd",
+      "story ee"
+    ],
+    "options": [
+      {
+        "text": "text11",
+        "arc": "arc11"
+      },
+      {
+        "text": "text22",
+        "arc": "arc22"
+      }
+    ]
+  }
+}
