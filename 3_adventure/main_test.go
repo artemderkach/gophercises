@@ -71,6 +71,20 @@ func TestHome(t *testing.T) {
 	body, err := ioutil.ReadAll(rr.Body)
 	require.Nil(t, err)
 
-	expected := "{\"arc\":{\"title\":\"title\",\"story\":[\"story1\",\"story2\"],\"options\":[{\"text\":\"text\",\"arc\":\"arc\"}]}}"
+	expected := "<h1></h1><br>\n\n<br></br>\n\n\n"
+	assert.Equal(t, expected, string(body))
+
+	req, err = http.NewRequest("GET", "/arc", nil)
+	require.Nil(t, err)
+
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(rest.home)
+
+	handler.ServeHTTP(rr, req)
+
+	body, err = ioutil.ReadAll(rr.Body)
+	require.Nil(t, err)
+
+	expected = "<h1>title</h1><br>\n\n\tstory1<br><br>\n\n\tstory2<br><br>\n\n<br></br>\n\n\n\t<a href=\"http://localhost:8080/arc\">text<br></br></a>\n\n"
 	assert.Equal(t, expected, string(body))
 }
