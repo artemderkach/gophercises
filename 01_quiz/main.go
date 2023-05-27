@@ -4,78 +4,94 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
+	"log"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
 )
 
-var counter = 1
-var correctCounter = 0
-
-func main() {
-	timeLimit := flag.Int64("t", 10, "time limit")
-	inputFile := flag.String("f", "problems.csv", "file with problems")
-	flag.Parse()
-
-	f, err := os.Open(*inputFile)
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	go func() {
-		err = startQuiz(f)
-		if err != nil {
-			fmt.Println("error:", err)
-		}
-		os.Exit(0)
-	}()
-
-	t := time.NewTimer(time.Second * time.Duration(*timeLimit))
-	<-t.C
-
-	fmt.Printf("\nresult: %d/%d\n", correctCounter, counter)
+// Result stores the data about quiz state for questions and answers
+type Result struct {
+	QuestionsCount      int
+	CorrectAnswersCount int
 }
 
-func startQuiz(f io.Reader) error {
+// Scanner is an interface to repeat fmt.Scan function
+type Scanner func(a ...any) (n int, err error)
+
+func main() {
+	var fname string
+	var timer int
+	flag.StringVar(&fname, "f", "problems.csv", "filename")
+	flag.IntVar(&timer, "t", 30, "time limit")
+	flag.Parse()
+
+	f, err := os.Open(fname)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	r := csv.NewReader(f)
-	// read headers
-	_, err := r.Read()
+
+	result := &Result{}
+
+	fmt.Println("running file:", fname)
+	fmt.Println("time limit:", timer)
+	fmt.Print("Press any Enter to start the test")
+	_, err = fmt.Scanln()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// put quiz in separate routine to run it on timer
+	go func() {
+		err = quiz(r, fmt.Scan, result)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	<-time.NewTimer(time.Second * time.Duration(timer)).C
+
+	fmt.Println()
+	fmt.Println("score:", result.CorrectAnswersCount, "/", result.QuestionsCount)
+}
+
+// run quiz
+func quiz(r *csv.Reader, f Scanner, result *Result) error {
+	records, err := r.ReadAll()
 	if err != nil {
 		return err
 	}
 
-	for record, err := r.Read(); ; record, err = r.Read() {
-		// check for unexpected errors
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		problem, solution := record[1], record[2]
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(records), func(i, j int) { records[i], records[j] = records[j], records[i] })
 
-		fmt.Printf("Problem #%d: %s? ", counter, problem)
+	return readQuestions(records, f, result)
+}
 
-		// get the input from command line
+// start reading question one by one
+func readQuestions(records [][]string, f Scanner, result *Result) error {
+	result.QuestionsCount = len(records)
+
+	// record[0] - question
+	// record[1] - answer
+	for _, record := range records {
+		fmt.Print(record[0], "? ")
+
+		// read user input
 		var input string
-		_, err := fmt.Scan(&input)
+		_, err := f(&input)
 		if err != nil {
 			return err
 		}
-		input = strings.Trim(input, "\n")
 
-		counter += 1
-		// check the correctness of answer
-		if solution == input {
-			correctCounter += 1
+		// compare user input with correct answer
+		if record[1] == strings.TrimSpace(input) {
+			result.CorrectAnswersCount += 1
 		}
 	}
-
-	fmt.Printf("result: %d/%d\n", correctCounter, counter)
 
 	return nil
 }
